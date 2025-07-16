@@ -27,7 +27,7 @@ camera.layers.enableAll();
 const flashlight = new THREE.SpotLight(
     0xffffff, // Lichtfarbe (weiß)
     5,       // Intensität
-    5,       // Maximale Leucht-Distanz
+    10,       // Maximale Leucht-Distanz
     THREE.MathUtils.degToRad(60), // Leuchtwinkel
     0.2,      // Weiche Kante des Lichtkegels
     2         // Realistische Lichtabnahme
@@ -161,7 +161,7 @@ const normalFov = 75, adsFov = 30;
 // Animation-System
 let playerAnimationMixer;
 let weaponActions = {};
-let currentWeaponAction = null; 
+let currentWeaponAction = null;
 
 // === NEU: SOUND VARIABLEN ===
 const audioLoader = new THREE.AudioLoader();
@@ -172,6 +172,12 @@ let backgroundMusic, shootSound, reloadSound;
 const enemies = [];
 const hitscanRaycaster = new THREE.Raycaster();
 let worldObjects = [];
+
+// --- NEU: VARIABLEN FÜR BEWEGLICHE OBJEKTE ---
+let pushableObjects = []; // <-- NEUE ZEILE
+let pushableDoor = null;    // Hier speichern wir das Tür-Objekt
+const pushSpeed = 1.0;      // Geschwindigkeit, mit der die Tür geschoben wird
+
 
 // =================================================================
 // === 5. LADE-MANAGER & MODELLE
@@ -192,7 +198,7 @@ if (instructions) instructions.querySelector('p').textContent = '';
 
 // === NEU: HINTERGRUNDMUSIK LADEN ===
 backgroundMusic = new THREE.Audio(listener);
-audioLoader.load('sounds/Background.mp3', function(buffer) {
+audioLoader.load('sounds/Background.mp3', function (buffer) {
     backgroundMusic.setBuffer(buffer);
     backgroundMusic.setLoop(true);
     backgroundMusic.setVolume(0.3);
@@ -206,71 +212,78 @@ audioLoader.load('sounds/Background.mp3', function(buffer) {
 // Globale Variable für den Boden, damit alle Lade-Funktionen darauf zugreifen können
 let spawnFloor = null;
 
-// Welt laden
-loader.load('assets/Paperland.glb', (gltf) => {
+// ERSETZE den kompletten Welt-Lade-Block damit
+
+loader.load('assets/NeueWelt.glb', (gltf) => {
     scene.add(gltf.scene);
 
-    // --- KORREKTE KOLLISIONSOBJEKTE SAMMELN ---
-    // Wir suchen gezielt den Container, den du in Blender erstellt hast.
+    // --- KORREKTE KOLLISIONSOBJEKTE SAMMELN UND SORTIEREN ---
+    worldObjects = []; // Liste leeren für neue Welt
+    pushableObjects = []; // Liste leeren für neue Welt
+
     const collisionBounds = gltf.scene.getObjectByName('CollisionBounds');
-    
     if (collisionBounds) {
-        // Wir fügen NUR die Kinder dieses Containers zur Kollisionsliste hinzu.
-        // Das schließt jetzt deine Cubes UND den Boden ein.
         collisionBounds.traverse((child) => {
             if (child.isMesh) {
-                worldObjects.push(child);
+                // Sortiere Objekte basierend auf ihrem Namen
+                if (child.name.startsWith('door')) {
+                    pushableObjects.push(child);
+                } else {
+                    worldObjects.push(child);
+                }
             }
         });
-        console.log("Kollisionsobjekte erfolgreich geladen:", worldObjects.map(o => o.name));
+        console.log("Unbewegliche Wände geladen:", worldObjects.map(o => o.name));
+        console.log("Bewegliche Objekte geladen:", pushableObjects.map(o => o.name));
     } else {
-        console.error("FEHLER: Der Container 'CollisionBounds' wurde in der GLB-Datei nicht gefunden!");
+        console.error("FEHLER: 'CollisionBounds' wurde nicht gefunden!");
     }
-    
-    // --- SPIELER AUF DEM BODEN SPAWNEN ---
-    // Wir finden den Boden einmal und speichern ihn in der globalen Variable.
-    spawnFloor = gltf.scene.getObjectByName('SpawnFloor');
 
-    if (spawnFloor) {
-        const spawnRaycaster = new THREE.Raycaster(new THREE.Vector3(0, 100, 0), new THREE.Vector3(0, -1, 0));
-        // Wichtig: Wir prüfen den Strahl nur gegen den Boden, nicht gegen alle Objekte.
+    // --- KORREKTER SPIELER-SPAWN ---
+    // Wir finden den Boden und nutzen die Koordinaten aus der level-config.js
+    const spawnFloor = worldObjects.find(obj => obj.name.includes('SpawnFloor'));
+    if (spawnFloor && level1.playerSpawn) {
+        const spawnPos = level1.playerSpawn;
+        const spawnRaycaster = new THREE.Raycaster(new THREE.Vector3(spawnPos.x, 100, spawnPos.z), new THREE.Vector3(0, -1, 0));
         const spawnIntersects = spawnRaycaster.intersectObject(spawnFloor);
         if (spawnIntersects.length > 0) {
             controls.getObject().position.copy(spawnIntersects[0].point).y += playerHeight;
+        } else {
+            // Notfall-Spawn, falls unter der Koordinate kein Boden ist
+            controls.getObject().position.set(spawnPos.x, playerHeight, spawnPos.z);
         }
     } else {
-        console.error("FEHLER: Der Boden 'SpawnFloor' konnte nicht gefunden werden!");
-        // Notfall-Spawn, falls der Boden fehlt
-        controls.getObject().position.set(0, playerHeight, 0);
+        console.error("FEHLER: Der Boden 'SpawnFloor' oder 'playerSpawn' in der Config konnte nicht gefunden werden!");
+        controls.getObject().position.set(0, playerHeight, 0); // Notfall-Spawn am Welt-Nullpunkt
     }
-}, undefined, (error) => console.error("Fehler beim Laden der Welt:", error));
 
+}, undefined, (error) => console.error("Fehler beim Laden der Welt:", error));
 
 
 // Waffe laden
 loader.load('assets/Mac10.glb', (gltf) => {
     // 3D-Modell der Waffe initialisieren
     weapon = gltf.scene;
-    weapon.traverse((child) => { 
+    weapon.traverse((child) => {
         child.layers.set(1); // Auf eine separate Layer legen, um es von der Welt zu trennen
     });
     weapon.position.copy(hipFirePosition);
     weapon.scale.set(0.4, 0.4, 0.4);
     camera.add(weapon);
-    
+
     // Mündungsfeuer (Licht-Effekt)
-    muzzleFlash = new THREE.PointLight(0xfff5a1, 10, 0.5, 0.5);
+    muzzleFlash = new THREE.PointLight(0xfff5a1, 10, 0.5, 1.5);
     muzzleFlash.position.set(0.05, -0.1, -1.5);
     muzzleFlash.visible = false;
     weapon.add(muzzleFlash);
 
     // Mündungsfeuer (sichtbares Bild/Sprite)
     const muzzleFlashTexture = new THREE.TextureLoader().load('assets/muzzleflash.png');
-    const muzzleFlashMaterial = new THREE.MeshBasicMaterial({ 
-        map: muzzleFlashTexture, 
-        blending: THREE.AdditiveBlending, 
-        transparent: true, 
-        depthWrite: false 
+    const muzzleFlashMaterial = new THREE.MeshBasicMaterial({
+        map: muzzleFlashTexture,
+        blending: THREE.AdditiveBlending,
+        transparent: true,
+        depthWrite: false
     });
     const muzzleFlashGeometry = new THREE.PlaneGeometry(0.5, 0.5);
     muzzleFlashSprite = new THREE.Mesh(muzzleFlashGeometry, muzzleFlashMaterial);
@@ -281,19 +294,19 @@ loader.load('assets/Mac10.glb', (gltf) => {
 
     // WAFFEN-SOUNDS LADEN
     shootSound = new THREE.Audio(listener);
-    audioLoader.load('sounds/AK47Shot.mp3', function(buffer) {
+    audioLoader.load('sounds/AK47Shot.mp3', function (buffer) {
         shootSound.setBuffer(buffer);
         shootSound.setVolume(0.5);
     });
     weapon.add(shootSound);
 
     reloadSound = new THREE.Audio(listener);
-    audioLoader.load('sounds/AK47Load.mp3', function(buffer) {
+    audioLoader.load('sounds/AK47Load.mp3', function (buffer) {
         reloadSound.setBuffer(buffer);
         reloadSound.setVolume(0.8);
     });
     weapon.add(reloadSound);
-    
+
     // ANIMATIONEN VORBEREITEN
     playerAnimationMixer = new THREE.AnimationMixer(weapon);
     const animNames = ['Stehen', 'Laufen', 'Schiessen', 'Nachladen'];
@@ -334,10 +347,7 @@ loader.load('assets/PaperZombie.glb', (gltf) => {
         const modelClone = SkeletonUtils.clone(gltf.scene);
         const behavior = enemyTypes[spawnInfo.type];
         if (behavior) {
-            // === DEBUG: Die wichtigste Prüfung! ===
-            // Wir prüfen, ob 'listener' an dieser Stelle bekannt ist.
-            console.log("Übergebe AudioListener an neuen Gegner:", listener);
-            
+
             const enemy = new Enemy(modelClone, gltf.animations, scene, worldObjects, behavior, gravity, listener);
             const spawnX = spawnInfo.position.x;
             const spawnZ = spawnInfo.position.z;
@@ -354,7 +364,7 @@ loader.load('assets/PaperZombie.glb', (gltf) => {
             } else {
                 enemy.mesh.position.set(spawnX, enemy.height, spawnZ);
             }
-            
+
             enemy.mesh.scale.set(0.5, 0.5, 0.5);
             enemies.push(enemy);
         }
@@ -407,7 +417,20 @@ if (instructions) {
 }
 controls.addEventListener('lock', () => { if (blocker) blocker.style.display = 'none'; if (crosshair) crosshair.style.display = 'block'; });
 controls.addEventListener('unlock', () => { if (blocker) blocker.style.display = 'block'; if (crosshair) crosshair.style.display = 'none'; });
-document.addEventListener('keydown', (event) => { keys[event.code] = true; });
+document.addEventListener('keydown', (event) => {
+    keys[event.code] = true;
+    console.log(`Taste gedrückt: ${event.code}`); // Debug
+
+    if (event.code === 'KeyP') {
+        const pos = controls.getObject().position;
+        console.log(`{ type: 'runner', position: { x: ${pos.x.toFixed(2)}, y: 0, z: ${pos.z.toFixed(2)} } },`);
+    }
+});
+
+document.addEventListener('keyup', (event) => {
+    keys[event.code] = false;
+    console.log(`Taste losgelassen: ${event.code}`); // Debug
+});
 document.addEventListener('keyup', (event) => { keys[event.code] = false; });
 document.addEventListener('mousedown', (event) => {
     if (event.button === 0) isShooting = true;
@@ -452,7 +475,7 @@ function animate() {
 
         const playerPosition = controls.getObject().position;
         enemies.forEach(enemy => enemy.update(delta, playerPosition, enemies));
-        
+
         enemies.forEach(enemy => {
             if (!enemy.isDead && enemy.currentState === 'attack' && enemy.actions['attack']?.isRunning()) {
                 if (enemy.mesh.position.distanceTo(playerPosition) < enemy.behavior.attackDistance + 0.5) {
@@ -470,56 +493,86 @@ function animate() {
                 }
             }
         });
+        // =================================================================
+        // === FINALER PHYSIK- UND INTERAKTIONS-BLOCK START ===
+        // =================================================================
 
-        const forwardInput = (Number(keys['KeyW'] || 0) - Number(keys['KeyS'] || 0));
-        const sidewaysInput = (Number(keys['KeyD'] || 0) - Number(keys['KeyA'] || 0));
-        
-        // Spielerbewegung
-        const moveSpeed = isAiming ? playerSpeed / 2 : playerSpeed;
-        const collisionMargin = 0.6;
-        const forwardDir = new THREE.Vector3();
-        controls.getObject().getWorldDirection(forwardDir);
-        forwardDir.y = 0;
-        forwardDir.normalize();
-        const rightDir = new THREE.Vector3().copy(forwardDir).cross(camera.up);
-        const forwardVelocity = forwardDir.multiplyScalar(forwardInput * moveSpeed * delta);
-        const sidewaysVelocity = rightDir.multiplyScalar(sidewaysInput * moveSpeed * delta);
-        if (forwardInput !== 0) {
-            wallRaycaster.set(playerPosition, forwardVelocity.clone().normalize());
-            const intersects = wallRaycaster.intersectObjects(worldObjects, true);
-            if (intersects.length === 0 || intersects[0].distance > collisionMargin) {
-                controls.getObject().position.add(forwardVelocity);
-            }
-        }
-        if (sidewaysInput !== 0) {
-            wallRaycaster.set(playerPosition, sidewaysVelocity.clone().normalize());
-            const intersects = wallRaycaster.intersectObjects(worldObjects, true);
-            if (intersects.length === 0 || intersects[0].distance > collisionMargin) {
-                controls.getObject().position.add(sidewaysVelocity);
-            }
-        }
+        // 1. Definiere alle Objekte, mit denen der Spieler kollidieren kann
+        const allColliders = worldObjects.concat(pushableObjects);
+
+        // 2. Bodenerkennung
         groundRaycaster.set(playerPosition, new THREE.Vector3(0, -1, 0));
-        const groundIntersects = groundRaycaster.intersectObjects(worldObjects, true);
-        onGround = groundIntersects.length > 0 && groundIntersects[0].distance <= playerHeight;
+        const groundIntersects = groundRaycaster.intersectObjects(allColliders, true);
+        onGround = groundIntersects.length > 0 && groundIntersects[0].distance <= playerHeight + 0.1;
+
         if (onGround) {
             playerVelocity.y = 0;
-            controls.getObject().position.y = groundIntersects[0].point.y + playerHeight;
+            if (keys['Space']) {
+                playerVelocity.y = jumpStrength;
+            }
         } else {
             playerVelocity.y -= gravity * delta;
-            controls.getObject().position.y += playerVelocity.y * delta;
         }
-        if (keys['Space'] && onGround) {
-            playerVelocity.y = jumpStrength;
+
+        // 3. Horizontale Bewegung & Interaktion
+        const forwardInput = (Number(keys['KeyW'] || 0) - Number(keys['KeyS'] || 0));
+        const sidewaysInput = (Number(keys['KeyD'] || 0) - Number(keys['KeyA'] || 0));
+        const moveSpeed = isAiming ? playerSpeed / 2 : playerSpeed;
+        const collisionMargin = 0.7;
+
+        let playerDirection = new THREE.Vector3();
+        controls.getObject().getWorldDirection(playerDirection);
+        playerDirection.y = 0;
+        playerDirection.normalize();
+
+        const rightDir = new THREE.Vector3().copy(playerDirection).cross(camera.up);
+        const intendedForwardMove = playerDirection.clone().multiplyScalar(forwardInput * moveSpeed * delta);
+        const intendedSidewaysMove = rightDir.clone().multiplyScalar(sidewaysInput * moveSpeed * delta);
+
+        // Kollisionsprüfung für Vorwärts/Rückwärts
+        if (forwardInput !== 0) {
+            const forwardRayDir = playerDirection.clone().multiplyScalar(Math.sign(forwardInput));
+            wallRaycaster.set(playerPosition, forwardRayDir);
+            const forwardIntersect = wallRaycaster.intersectObjects(allColliders, true)[0];
+
+            if (forwardIntersect && forwardIntersect.distance < collisionMargin) {
+                const hitObject = forwardIntersect.object;
+                // Prüfe, ob das getroffene Objekt in unserer Liste der beweglichen Objekte ist
+                if (pushableObjects.includes(hitObject) && keys['KeyB']) {
+                    // Es ist eine Tür und B wird gedrückt -> bewege die TÜR und den SPIELER
+                    hitObject.position.add(intendedForwardMove);
+                    controls.getObject().position.add(intendedForwardMove);
+                }
+                // Ansonsten: Blockiere die Bewegung des Spielers (indem wir sie nicht anwenden).
+            } else {
+                // Kein Hindernis -> bewege Spieler normal
+                controls.getObject().position.add(intendedForwardMove);
+            }
         }
-        
+
+        // Kollisionsprüfung für Seitwärts (einfachere "Stopp"-Logik ohne Schieben)
+        if (sidewaysInput !== 0) {
+            const sidewaysRayDir = rightDir.clone().multiplyScalar(Math.sign(sidewaysInput));
+            wallRaycaster.set(playerPosition, sidewaysRayDir);
+            if (wallRaycaster.intersectObjects(allColliders, true).length === 0 || wallRaycaster.intersectObjects(allColliders, true)[0].distance > collisionMargin) {
+                controls.getObject().position.add(intendedSidewaysMove);
+            }
+        }
+
+        // 4. Wende die vertikale Bewegung (Schwerkraft/Sprung) an
+        controls.getObject().position.y += playerVelocity.y * delta;
+
+        // =================================================================
+        // === FINALER PHYSIK- UND INTERAKTIONS-BLOCK ENDE ===
+        // =================================================================
+
         // --- ANIMATIONS- UND WAFFENLOGIK ---
         const isMoving = forwardInput !== 0 || sidewaysInput !== 0;
         const wantsToReload = keys['KeyR'] && magazines > 0 && currentAmmo < maxAmmo;
-        
+
         // NACHLADE-PROZESS STARTEN
         if (wantsToReload && !isReloading) {
             isReloading = true;
-            // === NEU: NACHLADE-SOUND ABSPIELEN ===
             if (reloadSound) reloadSound.play();
             const reloadDuration = weaponActions.Nachladen.getClip().duration;
             setTimeout(() => {
@@ -548,17 +601,15 @@ function animate() {
             currentAmmo--;
             updateHud();
 
-            // === NEU: SCHUSS-SOUND ABSPIELEN ===
             if (shootSound) {
-                if(shootSound.isPlaying) shootSound.stop();
+                if (shootSound.isPlaying) shootSound.stop();
                 shootSound.play();
             }
 
             if (shootAction) {
                 shootAction.reset().play();
             }
-            
-            // Hitscan und Mündungsfeuer...
+
             hitscanRaycaster.setFromCamera({ x: 0, y: 0 }, camera);
             const intersects = hitscanRaycaster.intersectObjects(enemies.filter(e => !e.isDead).map(e => e.mesh), true);
             if (intersects.length > 0) {

@@ -70,30 +70,24 @@ export const enemyTypes = {
 // Hier legen wir fest, wo welche Gegner im Level platziert werden.
 export const level1 = {
     enemySpawns: [
-        // Gruppe 1: Erste Welle, direkt vor dem Spieler
-        { type: 'runner', position: { x: 0, y: 0, z: -8 } },
-        { type: 'runner', position: { x: -3, y: 0, z: -7 } },
-        { type: 'runner', position: { x: 3, y: 0, z: -7 } },
-        { type: 'doublefist', position: { x: 5, y: 0, z: -10 } },
-        { type: 'doublefist', position: { x: -5, y: 0, z: -10 } },
- 
-        // === NEU: BoxEnemy zum Testen platziert ===
-        { type: 'BoxEnemy', position: { x: 8, y: 0, z: -12 } },
-        { type: 'BoxEnemy', position: { x: -8, y: 0, z: -12 } },
-
-        // Gruppe 2: Linker Bereich des Lagerhauses
-        { type: 'biter', position: { x: -10, y: 0, z: -12 } },
-        { type: 'biter', position: { x: -12, y: 0, z: -15 } },
-        { type: 'runner', position: { x: -9, y: 0, z: -18 } },
+        // Erste Welle (näher am Start)
+        { type: 'runner', position: { x: -25.23, y: 0, z: 0.18 } },
+        { type: 'runner', position: { x: -30.79, y: 0, z: -4.04 } },
+        { type: 'biter', position: { x: -41.77, y: 0, z: -12.95 } },
         
-        // Gruppe 3: Rechter Bereich des Lagerhauses
-        { type: 'biter', position: { x: 10, y: 0, z: -12 } },
-        { type: 'biter', position: { x: 12, y: 0, z: -15 } },
-        { type: 'runner', position: { x: 9, y: 0, z: -18 } },
-
-        // Gruppe 4: Mittleres Feld, zwischen den Gängen
-        { type: 'doublefist', position: { x: 0, y: 0, z: -15 } },
-        { type: 'doublefist', position: { x: 2, y: 0, z: -16 } },
+        // Zweite Welle (mittlerer Bereich)
+        { type: 'runner', position: { x: -30.61, y: 0, z: -27.75 } },
+        { type: 'doublefist', position: { x: -39.67, y: 0, z: -36.20 } },
+        { type: 'runner', position: { x: -32.32, y: 0, z: -34.73 } },
+        
+        // Dritte Welle (hinterer Bereich)
+        { type: 'biter', position: { x: -34.49, y: 0, z: -64.09 } },
+        { type: 'runner', position: { x: -28.51, y: 0, z: -63.45 } },
+        
+        // Finale Gruppe (ganz am Ende)
+        { type: 'doublefist', position: { x: -31.56, y: 0, z: -83.91 } },
+        { type: 'runner', position: { x: -32.21, y: 0, z: -86.26 } },
+        { type: 'runner', position: { x: -29.20, y: 0, z: -87.24 } },
     ]
 };
 
