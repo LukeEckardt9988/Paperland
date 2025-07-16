@@ -493,8 +493,11 @@ function animate() {
                 }
             }
         });
+
+
+
         // =================================================================
-        // === FINALER PHYSIK- UND INTERAKTIONS-BLOCK START ===
+        // === PHYSIK-BLOCK V3 (MIT KOLLISION FÜR BEWEGLICHE OBJEKTE) START ===
         // =================================================================
 
         // 1. Definiere alle Objekte, mit denen der Spieler kollidieren kann
@@ -518,7 +521,7 @@ function animate() {
         const forwardInput = (Number(keys['KeyW'] || 0) - Number(keys['KeyS'] || 0));
         const sidewaysInput = (Number(keys['KeyD'] || 0) - Number(keys['KeyA'] || 0));
         const moveSpeed = isAiming ? playerSpeed / 2 : playerSpeed;
-        const collisionMargin = 0.7;
+        const collisionMargin = 0.7; // Sicherheitsabstand für Kollisionen
 
         let playerDirection = new THREE.Vector3();
         controls.getObject().getWorldDirection(playerDirection);
@@ -536,21 +539,37 @@ function animate() {
             const forwardIntersect = wallRaycaster.intersectObjects(allColliders, true)[0];
 
             if (forwardIntersect && forwardIntersect.distance < collisionMargin) {
+                // KOLLISION!
                 const hitObject = forwardIntersect.object;
-                // Prüfe, ob das getroffene Objekt in unserer Liste der beweglichen Objekte ist
+
+                // Prüfe, ob das getroffene Objekt beweglich ist und die B-Taste gedrückt wird
                 if (pushableObjects.includes(hitObject) && keys['KeyB']) {
-                    // Es ist eine Tür und B wird gedrückt -> bewege die TÜR und den SPIELER
-                    hitObject.position.add(intendedForwardMove);
-                    controls.getObject().position.add(intendedForwardMove);
+
+                    // --- NEUE KOLLISIONSPRÜFUNG FÜR DIE TÜR ---
+                    const doorRaycaster = new THREE.Raycaster();
+                    const doorPosition = hitObject.position;
+                    // Wir prüfen von der Tür aus in die gleiche Richtung, in die der Spieler schiebt
+                    doorRaycaster.set(doorPosition, forwardRayDir);
+                    const doorIntersects = doorRaycaster.intersectObjects(worldObjects, true)[0]; // Prüft nur gegen unbewegliche Wände
+
+                    // Wenn der Weg für die Tür frei ist...
+                    if (!doorIntersects || doorIntersects.distance > collisionMargin) {
+                        // ...bewege die TÜR und den SPIELER.
+                        hitObject.position.add(intendedForwardMove);
+                        controls.getObject().position.add(intendedForwardMove);
+                    }
+                    // Wenn der Weg für die Tür blockiert ist, passiert nichts.
+
                 }
-                // Ansonsten: Blockiere die Bewegung des Spielers (indem wir sie nicht anwenden).
+                // Wenn es keine bewegliche Tür ist oder B nicht gedrückt wird, wird der Spieler blockiert.
+
             } else {
                 // Kein Hindernis -> bewege Spieler normal
                 controls.getObject().position.add(intendedForwardMove);
             }
         }
 
-        // Kollisionsprüfung für Seitwärts (einfachere "Stopp"-Logik ohne Schieben)
+        // Kollisionsprüfung für Seitwärts (einfachere "Stopp"-Logik)
         if (sidewaysInput !== 0) {
             const sidewaysRayDir = rightDir.clone().multiplyScalar(Math.sign(sidewaysInput));
             wallRaycaster.set(playerPosition, sidewaysRayDir);
@@ -563,7 +582,7 @@ function animate() {
         controls.getObject().position.y += playerVelocity.y * delta;
 
         // =================================================================
-        // === FINALER PHYSIK- UND INTERAKTIONS-BLOCK ENDE ===
+        // === PHYSIK-BLOCK ENDE ===
         // =================================================================
 
         // --- ANIMATIONS- UND WAFFENLOGIK ---
