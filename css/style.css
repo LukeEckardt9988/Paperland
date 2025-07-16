@@ -1,0 +1,239 @@
+/* css/style.css */
+@import url('https://fonts.googleapis.com/css2?family=Special+Elite&display=swap');
+
+body {
+    margin: 0;
+    font-family: 'Special Elite', monospace;
+    color: rgba(255, 255, 255, 0.7);
+    overflow: hidden;
+    background-color: #000;
+}
+
+#blocker {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+#instructions {
+    text-align: center;
+    cursor: pointer;
+    color: #ccc;
+}
+
+#instructions p {
+    font-size: 52px;
+    color: white;
+    text-shadow: 0 0 10px red, 0 0 20px red;
+    animation: flicker 2s infinite alternate;
+}
+
+#instructions span {
+    font-size: 18px;
+}
+
+#crosshair-container {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 4px;
+    display: none;
+    user-select: none;
+}
+
+.crosshair-line {
+    position: absolute;
+    background-color: rgba(255, 255, 255, 0.9);
+    transition: all 0.1s ease-out;
+}
+
+#crosshair-top {
+    width: 2px;
+    height: 10px;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+#crosshair-bottom {
+    width: 2px;
+    height: 10px;
+    bottom: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+#crosshair-left {
+    width: 10px;
+    height: 2px;
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+#crosshair-right {
+    width: 10px;
+    height: 2px;
+    right: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+#crosshair-container.recoiling #crosshair-top {
+    top: -18px;
+}
+
+#crosshair-container.recoiling #crosshair-bottom {
+    bottom: -18px;
+}
+
+#crosshair-container.recoiling #crosshair-left {
+    left: -18px;
+}
+
+#crosshair-container.recoiling #crosshair-right {
+    right: -18px;
+}
+
+#hud-top,
+#hud-bottom {
+    position: fixed;
+    width: 100%;
+    padding: 20px;
+    box-sizing: border-box;
+    pointer-events: none;
+}
+
+#hud-top {
+    top: 0;
+    text-align: center;
+}
+
+#hud-bottom {
+    bottom: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+}
+
+#timer-container,
+#health-container,
+#weapon-display,
+#ammo-container {
+    background: rgba(10, 10, 10, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 5px 15px;
+}
+
+#timer-container {
+    display: inline-block;
+}
+
+#timer {
+    font-size: 2.5em;
+    color: #990000;
+    text-shadow: 0 0 8px #ff0000;
+}
+
+#health-container {
+    padding: 10px 20px;
+}
+
+.hud-label {
+    font-size: 1.5em;
+    margin-right: 10px;
+    color: rgba(255, 255, 255, 0.4);
+}
+
+#health-display {
+    font-size: 3em;
+    color: #ccc;
+}
+
+#weapon-ammo-container {
+    text-align: right;
+    background: none;
+    border: none;
+}
+
+#weapon-display {
+    margin-bottom: 10px;
+}
+
+#weapon-name {
+    font-size: 1.5em;
+}
+
+#current-ammo {
+    font-size: 3em;
+    color: white;
+}
+
+.ammo-separator {
+    font-size: 2em;
+    margin: 0 5px;
+}
+
+#magazine-count {
+    font-size: 1.5em;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+#death-screen {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    background-color: rgba(150, 0, 0, 0.0);
+    display: none;
+    opacity: 0;
+    z-index: 999;
+    transition: all 2s;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 5em;
+    text-shadow: 2px 2px 4px #000;
+}
+
+#death-screen.visible {
+    background-color: rgba(150, 0, 0, 0.6);
+    opacity: 1;
+}
+
+@keyframes flicker {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.8;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+#progress-bar-container {
+    width: 300px;
+    height: 20px;
+    border: 2px solid #8D99AE;
+    margin: 20px auto;
+}
+
+#progress-bar {
+    width: 0%;
+    height: 100%;
+    background-color: #A8DADC;
+    transition: width 0.2s ease-out;
+}

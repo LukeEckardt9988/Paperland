@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Ego-Shooter</title>
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://unpkg.com/three@0.165.0/build/three.module.js",
+            "three/addons/": "https://unpkg.com/three@0.165.0/examples/jsm/"
+        }
+    }
+    </script>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Special+Elite&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="death-screen"><h1>DU BIST GESTORBEN</h1></div>
+    <div id="blocker">
+        <div id="instructions">
+            <p><span id="start-text" style="display: none;">Klick zum Spielen</span></p>
+            <div id="progress-bar-container"><div id="progress-bar"></div></div>
+            <span>W, A, S, D = Bewegen | Maus = Umschauen | Leertaste = Springen | R = Nachladen</span>
+        </div>
+    </div>
+    <div id="crosshair-container">
+        <div class="crosshair-line" id="crosshair-top"></div>
+        <div class="crosshair-line" id="crosshair-bottom"></div>
+        <div class="crosshair-line" id="crosshair-left"></div>
+        <div class="crosshair-line" id="crosshair-right"></div>
+    </div>
+    <div id="hud-top">
+        <div id="timer-container"><span id="timer">05:00</span></div>
+    </div>
+    <div id="hud-bottom">
+        <div id="health-container">
+            <span class="hud-label">HP</span>
+            <span id="health-display">100</span>
+        </div>
+        <div id="weapon-ammo-container">
+            <div id="weapon-display">
+                <span id="weapon-name">Schrotflinte</span> 
+            </div>
+            <div id="ammo-container">
+                <span id="current-ammo">30</span>
+                <span class="ammo-separator">/</span>
+                <span id="magazine-count">6</span>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="js/game.js"></script>
+</body>
+</html>
